@@ -2,10 +2,10 @@
   "version": 2,
   "functions": {
     "api/raw.js": {
-      "runtime": "nodejs22.x"
+      "runtime": "nodejs"
     },
     "api/resource.js": {
-      "runtime": "nodejs22.x"
+      "runtime": "nodejs"
     },
     "api/service.js": {
       "runtime": "edge"
