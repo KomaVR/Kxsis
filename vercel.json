@@ -2,6 +2,6 @@
   "version": 2,
   "framework": null,
   "routes": [
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "handle": "filesystem" }
   ]
 }
