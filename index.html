@@ -98,63 +98,94 @@
   <textarea id="bookmarkBox" placeholder="Bookmarks... (click bookmark button to add)"></textarea>
 
   <script>
-    const baseRaw = "https://api.allorigins.win/raw?url=";
-    const baseGet = "https://api.allorigins.win/get?url=";
-    const baseJSONP = "https://api.allorigins.win/get?callback=myFunc&url=";
+// --- FIXED PROXY BROWSER LOGIC --- //
 
-    function formatURL(url) {
-      return url.startsWith("http") ? url : "https://" + url;
-    }
+const baseRaw = "https://api.allorigins.win/raw?url=";
+const baseGet = "https://api.allorigins.win/get?url=";
+const baseJSONP = "https://api.allorigins.win/get?callback=myFunc&url=";
 
-    function buildURL(url) {
-      const charset = document.getElementById("charset").value;
-      const mode = document.getElementById("mode").value;
+function formatURL(url) {
+  url = url.trim();
+  if (!url) return "";
+  return url.startsWith("http") ? url : "https://" + url;
+}
 
-      let encoded = encodeURIComponent(formatURL(url));
-      let finalURL = "";
+function buildURL(url) {
+  const charset = document.getElementById("charset").value;
+  const mode = document.getElementById("mode").value;
 
-      if (mode === "raw") finalURL = baseRaw + encoded;
-      else if (mode === "get") finalURL = baseGet + encoded;
-      else if (mode === "jsonp") finalURL = baseJSONP + encoded;
+  url = formatURL(url);
+  const encoded = encodeURIComponent(url);
 
-      if (charset) finalURL += `&charset=${charset}`;
+  let finalURL = "";
+  if (mode === "raw") finalURL = baseRaw + encoded;
+  if (mode === "get") finalURL = baseGet + encoded;
+  if (mode === "jsonp") finalURL = baseJSONP + encoded;
 
-      return finalURL;
-    }
+  if (charset) finalURL += `&charset=${charset}`;
 
-    function go() {
-      const url = document.getElementById("urlInput").value;
-      if (!url) return;
-      document.getElementById("proxyFrame").src = buildURL(url);
-    }
+  return finalURL;
+}
 
-    async function fetchSource() {
-      const url = document.getElementById("urlInput").value;
-      if (!url) return;
+// MAIN NAVIGATION
+document.querySelector('button[onclick="go()"]')?.addEventListener("click", go);
+function go() {
+  const url = document.getElementById("urlInput").value;
+  if (!url) return;
 
-      const apiURL = buildURL(url).replace("/raw?", "/get?");
+  const finalURL = buildURL(url);
+  console.log("Navigating to:", finalURL);
 
-      const res = await fetch(apiURL);
-      const json = await res.json();
-      document.getElementById("sourceBox").value = json.contents;
-    }
+  document.getElementById("proxyFrame").src = finalURL;
+}
 
-    function useRaw() {
-      document.getElementById("mode").value = "raw";
-      go();
-    }
+// SOURCE FETCHING
+async function fetchSource() {
+  const url = document.getElementById("urlInput").value;
+  if (!url) return;
 
-    function addBookmark() {
-      const box = document.getElementById("bookmarkBox");
-      const url = document.getElementById("urlInput").value;
-      if (url) box.value += `
-${url}`;
-    }
+  let finalURL = buildURL(url);
 
-    function toggleBookmarks() {
-      const box = document.getElementById("bookmarkBox");
-      box.style.display = box.style.display === "none" ? "block" : "none";
-    }
-  </script>
+  // Force JSON mode
+  finalURL = finalURL.replace("/raw?", "/get?");
+
+  try {
+    const res = await fetch(finalURL);
+    if (!res.ok) throw new Error("Failed to fetch source");
+    const json = await res.json();
+
+    document.getElementById("sourceBox").value = json.contents || "(No content returned)";
+  } catch (err) {
+    document.getElementById("sourceBox").value = "Error: " + err.message;
+  }
+}
+
+document.querySelector('button[onclick="fetchSource()"]')?.addEventListener("click", fetchSource);
+
+// RAW MODE TOGGLE
+function useRaw() {
+  document.getElementById("mode").value = "raw";
+  go();
+}
+document.querySelector('button[onclick="useRaw()"]')?.addEventListener("click", useRaw);
+
+// BOOKMARKS
+function addBookmark() {
+  const box = document.getElementById("bookmarkBox");
+  const url = document.getElementById("urlInput").value;
+  if (url.trim()) {
+    box.value += `
+${formatURL(url)}`;
+  }
+}
+document.querySelector('button[onclick="addBookmark()"]')?.addEventListener("click", addBookmark);
+
+function toggleBookmarks() {
+  const box = document.getElementById("bookmarkBox");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+}
+document.querySelector('button[onclick="toggleBookmarks()"]')?.addEventListener("click", toggleBookmarks);
+
+</script>
 </body>
 </html>
