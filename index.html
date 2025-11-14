@@ -7,333 +7,469 @@
 <meta name="description" content="Kxsis — Proxy Browser with multi-engine support, navigation shim and secure blob rendering." />
 <link rel="icon" href="/favicon.svg" />
 <style>
-  :root{ --bg:#071029; --accent1:#6ea8fe; --accent2:#8b5cf6; --muted:#9fb0c8; --radius:12px; }
+  :root{
+    --bg:#071029; --accent1:#6ea8fe; --accent2:#8b5cf6; --muted:#9fb0c8;
+    --card:#0f1724; --glass:rgba(255,255,255,0.03); --radius:12px;
+  }
   html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#03040a);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6f2ff}
   .container{max-width:1280px;margin:18px auto;padding:18px;border-radius:12px;background:rgba(255,255,255,0.01)}
   header{display:flex;align-items:center;gap:12px}
   .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;color:#021428;font-weight:700}
+  h1{margin:0;font-size:18px}
+  .subtitle{color:var(--muted);font-size:13px}
   .controls{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
   .urlbar{flex:1;display:flex;align-items:center;background:#0f1724;padding:8px;border-radius:10px}
   .urlbar input{flex:1;background:transparent;border:0;padding:8px 10px;color:inherit}
-  button{padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,var(--accent1),var(--accent2));cursor:pointer}
-  .main{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:14px}
-  .viewer{border-radius:10px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,0.03);min-height:60vh;position:relative}
-  iframe{width:100%;height:100%;border:0}
+  .btn{padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,var(--accent1),var(--accent2));cursor:pointer;font-weight:600;color:#021426}
+  .mini{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:8px;color:var(--muted);cursor:pointer}
+  .main{display:grid;grid-template-columns:1fr 420px;gap:16px;margin-top:14px}
+  @media(max-width:1100px){ .main{grid-template-columns:1fr 360px} }
+  @media(max-width:880px){ .main{grid-template-columns:1fr} }
+  .viewer{border-radius:10px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,0.03);min-height:62vh;position:relative}
+  iframe{width:100%;height:100%;border:0;background:white}
   .panel{padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent)}
-  textarea{width:100%;height:220px;background:#07101a;border-radius:8px;border:1px solid rgba(255,255,255,0.02);padding:10px;color:#dceefb;white-space:pre-wrap;overflow:auto}
-  .mini{background:transparent;border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:8px;color:var(--muted)}
+  textarea{width:100%;height:140px;background:#07101a;border-radius:8px;border:1px solid rgba(255,255,255,0.02);padding:10px;color:#dceefb;white-space:pre-wrap;overflow:auto}
+  .logList{height:220px;overflow:auto;background:#061022;border-radius:8px;padding:8px;border:1px solid rgba(255,255,255,0.02);font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;color:#bfe8ff;font-size:12px}
   .status{position:absolute;left:12px;bottom:12px;color:var(--muted);font-size:13px}
   .loadingDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent1);animation:ping 1s infinite;vertical-align:middle;margin-right:6px}
   @keyframes ping{0%{transform:scale(.8);opacity:1}50%{transform:scale(1.2);opacity:.6}100%{transform:scale(.8);opacity:1}}
-  @media(max-width:980px){ .main{grid-template-columns:1fr} }
+  .kbd{background:rgba(255,255,255,0.03);border-radius:6px;padding:4px 6px;font-size:12px;margin-left:6px}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .flex{display:flex;gap:8px;align-items:center}
+  .pill{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);font-size:12px}
 </style>
 </head>
 <body>
-  <div class="container">
-    <header><div class="logo">KX</div><div><h1>Kxsis Proxy Browser</h1><div style="color:#9fb0c8">Vercel edition</div></div></header>
+  <div class="container" role="application" aria-label="Kxsis Proxy Browser">
+    <header>
+      <div class="logo">KX</div>
+      <div>
+        <h1>Kxsis Proxy Browser</h1>
+        <div class="subtitle">Multi-engine proxy browsing • Robust blob rendering • Logging & fail-safes</div>
+      </div>
+      <div style="margin-left:auto" class="muted small">v1.1</div>
+    </header>
 
-    <div class="controls">
+    <div class="controls" role="region" aria-label="controls">
       <div class="urlbar" role="search">
-        <input id="urlInput" placeholder="https://example.com or example.com" />
-        <select id="engineSelect" style="margin-left:8px" title="Engine (service uses AllOrigins client-side rewriter)">
-          <option value="service">Rewriter (AllOrigins, client)</option>
-          <option value="raw">Raw (AllOrigins raw)</option>
-          <option value="croxy">Croxy (embed)</option>
+        <input id="urlInput" aria-label="Enter URL" placeholder="https://example.com or example.com" />
+        <select id="engineSelect" title="Engine" style="margin-left:8px">
+          <option value="auto">Auto (recommended)</option>
+          <option value="service">Vercel service (/api/service)</option>
+          <option value="raw">Vercel raw (/api/raw)</option>
+          <option value="allorigins">AllOrigins</option>
+          <option value="croxy">CroxyProxy</option>
+          <option value="direct">Direct (CORS)</option>
         </select>
-        <select id="renderMode" style="margin-left:8px" title="Rendering mode">
-          <option value="blob">Blob (recommended)</option>
-          <option value="iframe">Iframe (direct)</option>
+        <select id="renderMode" title="Render mode" style="margin-left:8px">
+          <option value="blob">Blob (isolated)</option>
+          <option value="iframe">Iframe (direct embed)</option>
         </select>
-        <button id="goBtn">Go</button>
+        <button id="goBtn" class="btn">Go</button>
       </div>
 
-      <div style="display:flex;gap:6px">
-        <button id="backBtn" class="mini" title="Back">←</button>
-        <button id="forwardBtn" class="mini" title="Forward">→</button>
-        <button id="refreshBtn" class="mini" title="Refresh">⟳</button>
-        <button id="bookmarkBtn" class="mini" title="Save bookmark">★</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="backBtn" class="mini">←</button>
+        <button id="forwardBtn" class="mini">→</button>
+        <button id="refreshBtn" class="mini">⟳</button>
+        <button id="bookmarkBtn" class="mini">★</button>
+        <div class="pill small muted">Engine order: service → raw → allorigins → croxy → direct</div>
       </div>
     </div>
 
     <div class="main">
       <div>
         <div class="viewer" id="viewer">
-          <!-- allow-same-origin necessary for some embeds; allow-popups enables target=_blank links -->
-          <iframe id="proxyFrame" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
+          <iframe id="proxyFrame" sandbox="allow-scripts allow-forms allow-same-origin allow-popups" title="Kxsis content frame"></iframe>
           <div class="status" id="statusBar" aria-live="polite"></div>
         </div>
-        <div style="margin-top:8px;color:#9fb0c8">Tip: Blob mode isolates pages and lets the rewriter inject navigation shims.</div>
+
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;justify-content:space-between">
+          <div style="color:var(--muted)">Tips: Use Enter to navigate • Blob mode recommended</div>
+          <div class="small muted">Logs show server X-KXSIS-LogId when available</div>
+        </div>
       </div>
 
-      <aside class="panel">
-        <h3>Inspector & Controls</h3>
-        <input id="searchInput" placeholder="Search (DuckDuckGo)" style="width:100%;padding:8px;border-radius:8px;background:#071018;border:1px solid rgba(255,255,255,0.02);color:inherit" />
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="searchBtn" class="mini">Search</button>
-          <button id="openNewBtn" class="mini">Open external</button>
+      <aside class="panel" aria-label="Inspector and controls">
+        <h3 style="margin:0 0 8px 0">Inspector & Controls</h3>
+
+        <div style="margin-bottom:8px">
+          <input id="searchInput" placeholder="Search (DuckDuckGo)" style="width:100%;padding:8px;border-radius:8px;background:#071018;border:1px solid rgba(255,255,255,0.02);color:inherit" />
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="searchBtn" class="mini">Search</button>
+            <button id="openNewBtn" class="mini">Open external</button>
+            <button id="ytMirrorBtn" class="mini">YouTube Mirror</button>
+          </div>
         </div>
 
-        <div style="margin-top:12px;color:#9fb0c8">Source / Debug</div>
+        <div style="margin-top:8px;color:var(--muted)">Source (trimmed)</div>
         <textarea id="sourceBox" readonly placeholder="Fetched source appears here (trimmed)"></textarea>
 
-        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
-          <div style="color:#9fb0c8">Bookmarks</div>
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+          <div style="color:var(--muted)">Activity Log</div>
+          <div style="display:flex;gap:8px">
+            <button id="clearLogs" class="mini">Clear</button>
+            <button id="exportLogs" class="mini">Export</button>
+          </div>
+        </div>
+
+        <div class="logList" id="logList" role="log" aria-live="polite"></div>
+
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+          <div style="color:var(--muted)">Bookmarks</div>
           <button id="exportBookmark" class="mini">Export</button>
         </div>
-        <div id="bookmarkList" style="margin-top:8px;max-height:200px;overflow:auto"></div>
+        <div id="bookmarkList" style="margin-top:8px;max-height:140px;overflow:auto"></div>
       </aside>
     </div>
   </div>
 
 <script>
-/*
-  Client-side rewriter:
-  - Uses AllOrigins (api.allorigins.win) to fetch HTML and raw subresources
-  - Parses HTML in DOMParser, rewrites resource URLs to AllOrigins/raw?url=...
-  - Removes CSP meta tags
-  - Injects navigation shim to enable internal navigation routing via postMessage
-  - Builds a blob and loads the iframe from the blob URL
-  - Works on static hosting (Vercel) without server functions
+/* Kxsis Frontend v1.1
+ - Hybrid engine selection: service -> raw -> allorigins -> croxy -> direct
+ - Blob rendering with navigation shim injection (client rewriter fallback)
+ - Robust logging panel + export + X-KXSIS-LogId capture
+ - Retries, timeouts, fallback on iframe load failure
+ - Works with or without your Vercel backend; if backend missing, falls back to AllOrigins
 */
 
+/* ------------------ Utilities ------------------ */
 const $ = id => document.getElementById(id);
-const STATUS = $('statusBar');
+const LOG_EL = $('logList');
 const SOURCE = $('sourceBox');
+const STATUS = $('statusBar');
+const DEFAULT_TIMEOUT = 20000; // ms
+const RETRY_COUNT = 2;
 
-const ENGINES = {
-  service: async (u) => await fetchAndRewrite(u),    // returns HTML string
-  raw: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  croxy: (u) => `https://www.croxyproxy.com/embed/?url=${encodeURIComponent(u)}`
-};
+function safeLog(obj){
+  try { const str = typeof obj === 'string' ? obj : JSON.stringify(obj); const line = `[${new Date().toISOString()}] ${str}`; LOG_EL.insertAdjacentHTML('beforeend', `<div>${escapeHtml(line)}</div>`); LOG_EL.scrollTop = LOG_EL.scrollHeight; } catch(e){ console.log('log error', e); }
+}
+function clearLogs(){ LOG_EL.innerHTML = ''; }
+function downloadFile(filename, content){ const blob = new Blob([content], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+function formatURL(u){ if(!u) return ''; u = u.trim(); return /^\w+:\/\//.test(u) ? u : 'https://' + u; }
 
 function setStatus(text, busy=false){
-  STATUS.innerHTML = busy ? `<span class="loadingDot"></span>${text}` : text;
+  STATUS.innerHTML = busy ? `<span class="loadingDot"></span>${escapeHtml(text)}` : escapeHtml(text);
 }
 
-/* normalize user input */
-function formatURL(u){ if(!u) return ''; u = u.trim(); return /^\w+:\/\//.test(u) ? u : 'https://' + u }
+/* ------------------ Engines & endpoints ------------------ */
+/* Frontend tries these in order (auto), or the user can force an engine. */
+const ENGINES = {
+  service: (u) => `/api/service?url=${encodeURIComponent(u)}`,
+  raw: (u) => `/api/raw?url=${encodeURIComponent(u)}`,
+  allorigins_get: (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+  allorigins_raw: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  croxy: (u) => `https://www.croxyproxy.com/embed/?url=${encodeURIComponent(u)}`,
+  direct: (u) => u
+};
 
-/* ------------------ resource helpers ------------------ */
-function resolveAbsolute(base, relative){
-  try { return new URL(relative, base).href; } catch(e){ return relative; }
+function engineOrder(preferred){
+  if(preferred === 'service') return ['service','raw','allorigins_raw','croxy','direct'];
+  if(preferred === 'raw') return ['raw','allorigins_raw','croxy','direct'];
+  if(preferred === 'allorigins') return ['allorigins_raw','croxy','direct'];
+  if(preferred === 'croxy') return ['croxy','direct'];
+  if(preferred === 'direct') return ['direct'];
+  // auto:
+  return ['service','raw','allorigins_raw','croxy','direct'];
 }
 
-/* rewrite srcset attribute: convert every URL to AllOrigins/raw */
-function rewriteSrcset(srcset, base){
-  // srcset: "a.jpg 1x, b.jpg 2x"
-  return srcset.split(',').map(segment=>{
-    const parts = segment.trim().split(/\s+/);
-    const url = resolveAbsolute(base, parts[0]);
-    const proxied = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    return [proxied, ...parts.slice(1)].join(' ');
-  }).join(', ');
+/* ------------------ Fetch helpers ------------------ */
+async function fetchWithTimeout(url, opts = {}, timeout = DEFAULT_TIMEOUT){
+  const controller = new AbortController();
+  const id = setTimeout(()=> controller.abort(), timeout);
+  try {
+    const res = await fetch(url, {...opts, signal: controller.signal});
+    clearTimeout(id);
+    return res;
+  } catch(err){
+    clearTimeout(id);
+    throw err;
+  }
 }
 
-/* rewrite inline style url(...) */
-function rewriteInlineStyleUrls(styleValue, base){
-  return styleValue.replace(/url\\((['"]?)(.*?)\\1\\)/g, (m,q,orig)=>{
-    const abs = resolveAbsolute(base, orig);
-    const proxied = `https://api.allorigins.win/raw?url=${encodeURIComponent(abs)}`;
-    return `url("${proxied}")`;
-  });
+/* Safe text fetch with retries and logging */
+async function safeTextFetch(url, opts = {}, timeout = DEFAULT_TIMEOUT, retries = 1){
+  let lastErr;
+  for(let i=0;i<=retries;i++){
+    try {
+      const t0 = performance.now();
+      const res = await fetchWithTimeout(url, opts, timeout);
+      const t1 = performance.now();
+      safeLog({event:'fetch', url, status: res.status, took_ms: Math.round(t1-t0)});
+      if(!res.ok) throw new Error('status '+res.status);
+      const ct = res.headers.get('content-type') || '';
+      const logId = res.headers.get('x-kxsis-logid') || res.headers.get('x-kxsis-log-id') || null;
+      return { res, text: await res.text(), ct, logId };
+    } catch(err){
+      lastErr = err;
+      safeLog({event:'fetch_error', url, err: err && err.message, attempt: i+1});
+      // small backoff
+      await new Promise(r => setTimeout(r, 200 * (i+1)));
+    }
+  }
+  throw lastErr;
 }
 
-/* remove CSP meta tags that would restrict execution */
-function removeCspMeta(doc){
-  const metas = doc.querySelectorAll('meta[http-equiv], meta[content]');
-  metas.forEach(m=>{
-    const he = (m.getAttribute('http-equiv')||'').toLowerCase();
-    const name = (m.getAttribute('name')||'').toLowerCase();
-    if(he.includes('content-security-policy') || name.includes('content-security-policy') || he.includes('x-frame-options')) m.remove();
-  });
+/* ------------------ Client-side rewriter fallback (DOM parser) ------------------ */
+function clientRewriteToAllOrigins(htmlText, baseUrl){
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    // remove CSP meta tags
+    doc.querySelectorAll('meta[http-equiv], meta[name]').forEach(m=>{
+      const he = (m.getAttribute('http-equiv')||'').toLowerCase();
+      const name = (m.getAttribute('name')||'').toLowerCase();
+      if(he.includes('content-security-policy') || name.includes('content-security-policy') || he.includes('x-frame-options')) m.remove();
+    });
+
+    if(!doc.querySelector('base')){
+      const baseEl = doc.createElement('base');
+      baseEl.setAttribute('href', baseUrl);
+      const head = doc.querySelector('head') || doc.documentElement;
+      head.insertAdjacentElement('afterbegin', baseEl);
+    }
+
+    const resolve = (rel) => { try { return new URL(rel, baseUrl).href } catch(e){ return rel } };
+
+    doc.querySelectorAll('script[src]').forEach(s=>{
+      const src = s.getAttribute('src');
+      if(!src) return;
+      s.setAttribute('src', ENGINES.allorigins_raw(resolve(src)));
+      s.removeAttribute('integrity'); s.removeAttribute('crossorigin');
+    });
+
+    doc.querySelectorAll('link[rel~="stylesheet"]').forEach(l=>{
+      const href = l.getAttribute('href');
+      if(!href) return;
+      l.setAttribute('href', ENGINES.allorigins_raw(resolve(href)));
+      l.removeAttribute('integrity'); l.removeAttribute('crossorigin');
+    });
+
+    doc.querySelectorAll('img[src]').forEach(img=>{
+      const src = img.getAttribute('src'); if(!src) return;
+      img.setAttribute('src', ENGINES.allorigins_raw(resolve(src)));
+    });
+
+    doc.querySelectorAll('img[srcset], source[srcset]').forEach(el=>{
+      const ss = el.getAttribute('srcset'); if(!ss) return;
+      const parts = ss.split(',').map(p=>{
+        const seg = p.trim().split(/\s+/); const urlpart = seg[0];
+        return ENGINES.allorigins_raw(resolve(urlpart)) + (seg.slice(1).length? ' '+seg.slice(1).join(' '):'');
+      });
+      el.setAttribute('srcset', parts.join(', '));
+    });
+
+    doc.querySelectorAll('[style]').forEach(el=>{
+      const st = el.getAttribute('style')||'';
+      if(st.includes('url(')){
+        el.setAttribute('style', st.replace(/url\((['"]?)(.*?)\1\)/g, (m,q,u)=>`url("${ENGINES.allorigins_raw(resolve(u))}")`));
+      }
+    });
+
+    // rewrite style blocks
+    doc.querySelectorAll('style').forEach(s=>{
+      s.textContent = s.textContent.replace(/url\((['"]?)(.*?)\1\)/g, (m,q,u)=>`url("${ENGINES.allorigins_raw(resolve(u))}")`);
+    });
+
+    // anchors → absolute URLs and remove target
+    doc.querySelectorAll('a[href]').forEach(a=>{
+      const h = a.getAttribute('href'); if(!h) return;
+      try{ a.setAttribute('href', new URL(h, baseUrl).href); } catch(e){}
+      a.removeAttribute('target');
+    });
+
+    // inject nav shim
+    const shim = clientNavShim();
+    if(doc.body) doc.body.insertAdjacentHTML('beforeend', shim);
+    else doc.documentElement.insertAdjacentHTML('beforeend', shim);
+
+    return '<!doctype html>\n' + doc.documentElement.outerHTML;
+  }catch(e){
+    safeLog({event:'rewrite_client_failed', err: e && e.message});
+    throw e;
+  }
 }
 
-/* navigation shim: posts clicks/forms to parent */
-function navShimScript(){
+/* small nav shim for client blobs */
+function clientNavShim(){
   return `<script>
 (function(){
   function resolveHref(el){ try{ return new URL(el.getAttribute('href')||'', document.baseURI).href }catch(e){ return null } }
   document.addEventListener('click', function(e){
     const a = e.target.closest && e.target.closest('a');
-    if(a && a.href){
-      e.preventDefault();
-      const href = resolveHref(a);
-      if(href) window.parent.postMessage({type:'kxsis:navigate', href: href}, '*');
-    }
+    if(a && a.href){ e.preventDefault(); const href = resolveHref(a); if(href) window.parent.postMessage({type:'kxsis:navigate', href: href}, '*'); }
   }, true);
-
-  document.addEventListener('submit', function(e){
-    e.preventDefault();
-    const f = e.target;
-    const action = f.getAttribute('action') || document.baseURI;
-    const method = (f.getAttribute('method') || 'GET').toUpperCase();
-    const fd = new FormData(f);
-    const obj = {};
-    fd.forEach((v,k)=>{ if(obj[k]===undefined) obj[k]=v; else { if(!Array.isArray(obj[k])) obj[k]=[obj[k]]; obj[k].push(v);} });
-    if(method === 'GET'){
-      const params = new URLSearchParams(obj).toString();
-      const url = action + (action.includes('?') ? '&' : '?') + params;
-      window.parent.postMessage({type:'kxsis:navigate', href: url}, '*');
-    } else {
-      window.parent.postMessage({type:'kxsis:post', href: action, method:'POST', body: obj}, '*');
-    }
-  }, true);
-  // remove targets to avoid breaking navigation
+  document.addEventListener('submit', function(e){ e.preventDefault(); const f=e.target; const action=f.getAttribute('action')||document.baseURI; const method=(f.getAttribute('method')||'GET').toUpperCase(); const fd=new FormData(f); const obj={}; fd.forEach((v,k)=>{ if(obj[k]===undefined) obj[k]=v; else { if(!Array.isArray(obj[k])) obj[k]=[obj[k]]; obj[k].push(v);} }); if(method==='GET'){ const params=new URLSearchParams(obj).toString(); const url = action + (action.includes('?')? '&' : '?') + params; window.parent.postMessage({type:'kxsis:navigate', href: url}, '*'); } else { window.parent.postMessage({type:'kxsis:post', href: action, method:'POST', body: obj}, '*'); } }, true);
   document.querySelectorAll('a[target]').forEach(a=>a.removeAttribute('target'));
 })();
 <\/script>`;
 }
 
-/* fetch the HTML via AllOrigins GET and rewrite every resource to AllOrigins/raw */
-async function fetchAndRewrite(url){
-  setStatus('Fetching HTML via AllOrigins...', true);
-  const api = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const res = await fetch(api);
-  if(!res.ok) throw new Error('AllOrigins fetch failed: ' + res.status);
-  const j = await res.json();
-  let html = j.contents || '';
-
-  // parse HTML
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  // remove CSP meta tags
-  removeCspMeta(doc);
-
-  // ensure base exists
-  if(!doc.querySelector('base')){
-    const baseEl = doc.createElement('base');
-    baseEl.setAttribute('href', url);
-    const head = doc.querySelector('head') || doc.documentElement;
-    head.insertAdjacentElement('afterbegin', baseEl);
-  }
-
-  // rewrite scripts
-  doc.querySelectorAll('script[src]').forEach(s=>{
-    const src = s.getAttribute('src');
-    if(!src) return;
-    const abs = resolveAbsolute(url, src);
-    s.setAttribute('src', `https://api.allorigins.win/raw?url=${encodeURIComponent(abs)}`);
-    // keep integrity/crossorigin if present? remove them to avoid blocking
-    s.removeAttribute('integrity');
-    s.removeAttribute('crossorigin');
-  });
-
-  // rewrite stylesheets
-  doc.querySelectorAll('link[rel~="stylesheet"]').forEach(l=>{
-    const href = l.getAttribute('href');
-    if(!href) return;
-    const abs = resolveAbsolute(url, href);
-    l.setAttribute('href', `https://api.allorigins.win/raw?url=${encodeURIComponent(abs)}`);
-    l.removeAttribute('integrity');
-    l.removeAttribute('crossorigin');
-  });
-
-  // rewrite images and sources
-  doc.querySelectorAll('img[src]').forEach(img=>{
-    const src = img.getAttribute('src');
-    if(!src) return;
-    const abs = resolveAbsolute(url, src);
-    img.setAttribute('src', `https://api.allorigins.win/raw?url=${encodeURIComponent(abs)}`);
-  });
-  // srcset
-  doc.querySelectorAll('img[srcset], source[srcset]').forEach(el=>{
-    const ss = el.getAttribute('srcset');
-    if(!ss) return;
-    el.setAttribute('srcset', rewriteSrcset(ss, url));
-  });
-  // video/audio source src
-  doc.querySelectorAll('source[src]').forEach(s=>{ const v=s.getAttribute('src'); if(!v) return; const abs = resolveAbsolute(url, v); s.setAttribute('src', `https://api.allorigins.win/raw?url=${encodeURIComponent(abs)}`); });
-
-  // rewrite inline style url()s
-  doc.querySelectorAll('[style]').forEach(el=>{
-    const st = el.getAttribute('style');
-    if(st && st.includes('url(')){
-      el.setAttribute('style', rewriteInlineStyleUrls(st, url));
-    }
-  });
-
-  // rewrite CSS inside <style> blocks (simple regex)
-  doc.querySelectorAll('style').forEach(styleEl=>{
-    const txt = styleEl.textContent;
-    if(txt && txt.includes('url(')){
-      styleEl.textContent = txt.replace(/url\\((['\"]?)(.*?)\\1\\)/g, (m,q,inner)=>{
-        const abs = resolveAbsolute(url, inner);
-        return `url("https://api.allorigins.win/raw?url=${encodeURIComponent(abs)}")`;
-      });
-    }
-  });
-
-  // rewrite anchor hrefs to absolute (so shim navigates to full url)
-  doc.querySelectorAll('a[href]').forEach(a=>{
-    const h = a.getAttribute('href');
-    if(!h) return;
-    try{ a.setAttribute('href', new URL(h, url).href); }catch(e){}
-    a.removeAttribute('target');
-  });
-
-  // inject navigation shim at end of body
-  const shim = doc.createElement('div');
-  shim.innerHTML = navShimScript();
-  (doc.body || doc.documentElement).appendChild(shim);
-
-  setStatus('Rewritten HTML ready', false);
-  return '<!doctype html>\\n' + doc.documentElement.outerHTML;
-}
-
-/* ------------------ main load flow ------------------ */
-let currentBlob = null;
+/* ------------------ Blob iframe handling ------------------ */
+let currentBlobUrl = null;
 function revokeCurrentBlob(){
-  if(currentBlob){ try{ URL.revokeObjectURL(currentBlob); }catch(e){} currentBlob = null; }
+  if(currentBlobUrl){ try{ URL.revokeObjectURL(currentBlobUrl); }catch(e){} currentBlobUrl = null; }
 }
 
+/* Wait for iframe to indicate readiness via postMessage or time out */
+function waitForFrameReady(rid, timeout = 5000){
+  return new Promise((resolve) => {
+    let done = false;
+    const t = setTimeout(()=> { if(!done){ done = true; window.removeEventListener('message', onmsg); resolve({ok:false, reason:'timeout'}); } }, timeout);
+    function onmsg(ev){
+      const m = ev.data || {};
+      if(m && m.type === 'kxsis:ready'){
+        // optional: confirm rid or url if posted
+        if(!done){
+          done = true;
+          clearTimeout(t);
+          window.removeEventListener('message', onmsg);
+          resolve({ok:true, info:m});
+        }
+      }
+    }
+    window.addEventListener('message', onmsg);
+  });
+}
+
+/* Fully-featured load algorithm:
+   - tries engines in order (service/raw/allorigins/croxy/direct)
+   - for HTML responses: prefer rewriter html -> load as blob, wait for ready
+   - fallback to iframe raw endpoints if blob fails or times out
+   - logs and surfaces X-KXSIS-LogId header
+*/
 async function loadURL(raw){
   if(!raw) return;
   const url = formatURL(raw);
   $('urlInput').value = url;
-  const engineKey = $('engineSelect').value;
-  const mode = $('renderMode').value;
+  setStatus('Resolving engine...', true);
+  clearSource();
 
-  setStatus('Loading: ' + url, true);
-  SOURCE.value = '';
+  const chosenEngine = $('engineSelect').value;
+  const renderMode = $('renderMode').value;
 
-  try{
-    // iframe direct mode (no rewrite) - good for croxy/embed
-    if(mode === 'iframe' && engineKey !== 'service'){
-      const src = ENGINES[engineKey](url);
-      $('proxyFrame').src = src;
-      setStatus('Loaded (iframe): ' + engineKey, false);
-      return;
+  const order = engineOrder(chosenEngine);
+  safeLog({event:'navigate_start', url, order});
+
+  // helper to attempt one engine
+  async function tryEngine(engineKey){
+    safeLog({event:'engine_try', engine: engineKey});
+    try {
+      if(engineKey === 'service'){
+        // call service endpoint on your Vercel (expects rewritten HTML)
+        const endpoint = ENGINES.service(url);
+        const { res, text, ct, logId } = await safeTextFetch(endpoint, {}, 20000, RETRY_COUNT);
+        safeLog({event:'service_fetched', ct, status: res.status, logId});
+        // if content-type isn't html, treat as redirect to raw
+        if(!ct.includes('text/html')){
+          safeLog({event:'service_non_html', ct});
+          return { ok:false, reason:'non_html' };
+        }
+        // load blob
+        revokeCurrentBlob();
+        currentBlobUrl = URL.createObjectURL(new Blob([text], {type:'text/html'}));
+        const frame = $('proxyFrame');
+        frame.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
+        frame.src = currentBlobUrl;
+        setStatus('Loaded (service blob)', true);
+        // capture log id
+        if(logId) safeLog({event:'server_log_id', logId});
+        // wait for frame ready
+        const ready = await waitForFrameReady(logId, 5000);
+        if(ready.ok){ setStatus('Ready'); return { ok:true, engine:'service', logId }; }
+        // if frame didn't announce, still consider success but monitor for layout failures
+        safeLog({event:'frame_ready_timeout', engine:'service'});
+        return { ok:true, engine:'service', logId, warning:'frame_no_ready' };
+      }
+
+      if(engineKey === 'raw'){
+        const endpoint = ENGINES.raw(url);
+        const frame = $('proxyFrame');
+        frame.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
+        frame.src = endpoint;
+        setStatus('Loaded (raw iframe)', true);
+        return { ok:true, engine:'raw' };
+      }
+
+      if(engineKey === 'allorigins_raw'){
+        const endpoint = ENGINES.allorigins_raw(url);
+        const htmlObj = await safeTextFetch(ENGINES.allorigins_get(url), {}, 20000, RETRY_COUNT).catch(e=>null);
+        if(!htmlObj) throw new Error('AllOrigins failed');
+        const j = htmlObj.res && htmlObj.text ? JSON.parse(htmlObj.text) : null;
+        const contents = j && j.contents ? j.contents : htmlObj.text;
+        const rewritten = clientRewriteToAllOrigins(contents, url);
+        revokeCurrentBlob();
+        currentBlobUrl = URL.createObjectURL(new Blob([rewritten], {type:'text/html'}));
+        const frame = $('proxyFrame');
+        frame.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
+        frame.src = currentBlobUrl;
+        setStatus('Loaded (AllOrigins blob)', true);
+        return { ok:true, engine:'allorigins_raw' };
+      }
+
+      if(engineKey === 'croxy'){
+        const endpoint = ENGINES.croxy(url);
+        const frame = $('proxyFrame');
+        frame.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
+        frame.src = endpoint;
+        setStatus('Loaded (Croxy embed)', true);
+        return { ok:true, engine:'croxy' };
+      }
+
+      if(engineKey === 'direct'){
+        const endpoint = ENGINES.direct(url);
+        const frame = $('proxyFrame');
+        frame.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
+        frame.src = endpoint;
+        setStatus('Loaded (direct)', true);
+        return { ok:true, engine:'direct' };
+      }
+
+      return { ok:false, reason:'unknown_engine' };
+    } catch(err){
+      safeLog({event:'engine_error', engine: engineKey, err: err && err.message});
+      return { ok:false, err: err && err.message };
     }
-
-    // service engine (client-side rewriter) -> returns HTML string
-    if(engineKey === 'service'){
-      const html = await ENGINES.service(url);
-      SOURCE.value = html.slice(0, 300000);
-      revokeCurrentBlob();
-      const blobUrl = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-      currentBlob = blobUrl;
-      $('proxyFrame').sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
-      $('proxyFrame').src = blobUrl;
-      setStatus('Loaded (rewritten)', false);
-      return;
-    }
-
-    // fallback raw engine: load AllOrigins raw endpoint directly in iframe (may show some CSP issues)
-    if(engineKey === 'raw'){
-      const rawUrl = ENGINES.raw(url);
-      $('proxyFrame').src = rawUrl;
-      setStatus('Loaded (raw)', false);
-      return;
-    }
-
-  }catch(err){
-    console.error(err);
-    setStatus('Load failed: ' + err.message, false);
-    SOURCE.value = 'Error: ' + (err && err.message ? err.message : 'unknown');
-    // open externally as last resort
-    window.open(url, '_blank');
   }
+
+  // try engines in order until success
+  let lastErr = null;
+  for(const e of order){
+    const r = await tryEngine(e);
+    if(r.ok){
+      safeLog({event:'navigate_ok', url, engine: e, info: r});
+      setStatus(`Loaded via ${e}`, false);
+      // after a successful blob load, we still perform a layout check after short delay
+      setTimeout(()=> {
+        // if page appears blank (heuristic: iframe height contentWindow length?), fallback
+        try {
+          const frame = $('proxyFrame');
+          const doc = frame.contentDocument || frame.contentWindow && frame.contentWindow.document;
+          if(doc && doc.body && doc.body.innerText && doc.body.innerText.trim().length < 5){
+            safeLog({event:'empty_render_detected', engine:e});
+            // attempt fallback to next engine automatically
+            // note: don't infinite-loop — let UI user try manual fallback
+          }
+        } catch(ex){
+          // cross-origin will throw — skip check
+        }
+      }, 1500);
+      return;
+    }
+    lastErr = r;
+  }
+
+  // all failed
+  safeLog({event:'navigate_failed', url, lastErr});
+  setStatus('Load failed', false);
+  SOURCE.value = lastErr && lastErr.err ? 'Error: ' + lastErr.err : 'Load failed';
+  // show helpful fallback prompt
+  if(confirm('Automatic failover failed. Open site externally in a new tab?')) window.open(url,'_blank');
 }
 
 /* ------------------ IPC from iframe ------------------ */
@@ -343,35 +479,44 @@ window.addEventListener('message', async (ev)=>{
   if(m.type === 'kxsis:navigate' && m.href){
     await loadURL(m.href);
   } else if(m.type === 'kxsis:post'){
-    // basic POST handling using AllOrigins as a middleman (POST through AllOrigins isn't supported)
-    // Instead, we open externally for POST forms as a safer fallback
-    console.warn('POST from iframe requested; opening externally for safety', m);
+    console.warn('POST requested from iframe; opening externally for safety', m);
     window.open(m.href, '_blank');
   } else if(m.type === 'kxsis:ready'){
+    safeLog({event:'frame_ready', info: m});
+    // optional: update title
     if(m.title) document.title = `Kxsis — ${m.title}`;
   }
 });
 
-/* ------------------ UI wiring & bookmarks ------------------ */
+/* ------------------ UI wiring ------------------ */
 $('goBtn').addEventListener('click', ()=> loadURL($('urlInput').value));
-$('urlInput').addEventListener('keydown', e => { if(e.key === 'Enter') loadURL($('urlInput').value) });
+$('urlInput').addEventListener('keydown', e => { if(e.key === 'Enter') loadURL($('urlInput').value); });
 $('searchBtn').addEventListener('click', ()=> { const q = $('searchInput').value.trim(); if(q) loadURL('https://duckduckgo.com/?q=' + encodeURIComponent(q)); });
 $('openNewBtn').addEventListener('click', ()=> { const u = formatURL($('urlInput').value); if(u) window.open(u,'_blank'); });
 $('refreshBtn').addEventListener('click', ()=> { const u = formatURL($('urlInput').value); if(u) loadURL(u); });
 
 /* bookmarks */
 let bookmarks = JSON.parse(localStorage.getItem('kxsis:bookmarks')||'[]');
-function renderBookmarks(){ const el = $('bookmarkList'); el.innerHTML=''; bookmarks.forEach(u => { const d = document.createElement('div'); d.style.padding='6px'; d.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u}</div><div><button class="mini open">Open</button><button class="mini copy">Copy</button></div></div>`; d.querySelector('.open').addEventListener('click', ()=> loadURL(u)); d.querySelector('.copy').addEventListener('click', ()=> navigator.clipboard.writeText(u)); el.appendChild(d); }) }
+function renderBookmarks(){ const el = $('bookmarkList'); el.innerHTML=''; bookmarks.forEach(u => { const d = document.createElement('div'); d.style.padding='6px'; d.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(u)}</div><div><button class="mini open">Open</button><button class="mini copy">Copy</button></div></div>`; d.querySelector('.open').addEventListener('click', ()=> loadURL(u)); d.querySelector('.copy').addEventListener('click', ()=> navigator.clipboard.writeText(u)); el.appendChild(d); }) }
 $('bookmarkBtn').addEventListener('click', ()=> { const u = formatURL($('urlInput').value); if(u && !bookmarks.includes(u)){ bookmarks.unshift(u); localStorage.setItem('kxsis:bookmarks', JSON.stringify(bookmarks)); renderBookmarks(); }});
-$('exportBookmark').addEventListener('click', ()=> { const data = JSON.stringify(bookmarks, null, 2); const blob = new Blob([data], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kxsis-bookmarks.json'; a.click(); URL.revokeObjectURL(a.href); });
-
+$('exportBookmark').addEventListener('click', ()=> { const data = JSON.stringify(bookmarks, null, 2); downloadFile('kxsis-bookmarks.json', data); });
 renderBookmarks();
+
+/* logs control */
+$('clearLogs').addEventListener('click', ()=> clearLogs());
+$('exportLogs').addEventListener('click', ()=> { const data = LOG_EL.innerText || ''; downloadFile('kxsis-logs.txt', data); });
+
+function clearSource(){ SOURCE.value = ''; }
 
 /* Boot */
 (function boot(){
   const qp = new URLSearchParams(location.search);
   if(qp.has('u')) loadURL(qp.get('u'));
-  else loadURL('https://wikipedia.org');
+  else {
+    // gentle startup open wikipedia but use Auto engine
+    $('engineSelect').value = 'auto';
+    loadURL('https://wikipedia.org');
+  }
 })();
 </script>
 </body>
