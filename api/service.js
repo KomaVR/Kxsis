@@ -1,5 +1,5 @@
 // /api/service.js
-export const config = { runtime: 'nodejs18.x' };
+export const config = { runtime: 'nodejs' };
 
 const NAV_SHIM = `<script>
 (function(){
