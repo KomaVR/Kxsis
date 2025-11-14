@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "functions": {
+    "api/service.js": { "runtime": "edge" },
+    "api/resource.js": { "memory": 1024, "maxDuration": 30 },
+    "api/raw.js": { "memory": 512, "maxDuration": 10 }
+  },
+  "rewrites": [
+    { "source": "/api/service", "destination": "/api/service.js" },
+    { "source": "/api/resource", "destination": "/api/resource.js" },
+    { "source": "/api/raw", "destination": "/api/raw.js" }
+  ]
+}
