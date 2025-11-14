@@ -1,32 +1,10 @@
 {
   "version": 2,
-  "functions": {
-    "api/raw.js": {
-      "runtime": "nodejs"
-    },
-    "api/resource.js": {
-      "runtime": "nodejs"
-    },
-    "api/service.js": {
-      "runtime": "edge"
-    }
-  },
   "routes": [
-    {
-      "src": "/api/raw",
-      "dest": "/api/raw.js"
-    },
-    {
-      "src": "/api/resource",
-      "dest": "/api/resource.js"
-    },
-    {
-      "src": "/api/service",
-      "dest": "/api/service.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/api/raw", "dest": "/api/raw.js" },
+    { "src": "/api/resource", "dest": "/api/resource.js" },
+    { "src": "/api/service", "dest": "/api/service.js" },
+
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
