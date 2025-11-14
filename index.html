@@ -3,143 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Proxy Protected Browser</title>
+  <title>Kxsis Proxy Browser</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f0f0f;
-      color: #fff;
-    }
-    header {
-      background: #1a1a1a;
-      padding: 20px;
-      text-align: center;
-      font-size: 1.8rem;
-      font-weight: bold;
-      box-shadow: 0 0 10px #000;
-    }
-    #controls {
-      display: flex;
-      gap: 10px;
-      padding: 15px;
-      background: #111;
-      box-shadow: 0 0 5px #000 inset;
-    }
-    #urlInput {
-      flex: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-      font-size: 1rem;
-    }
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #3b82f6;
-      color: white;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: 0.2s;
-    }
-    button:hover {
-      background: #60a5fa;
-    }
-    #frameContainer {
-      width: 100%;
-      height: calc(100vh - 130px);
-    }
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #000;
-    }
-    #toolbar {
-      display: flex;
-      gap: 10px;
-      padding: 10px;
-      background: #131313;
-      align-items: center;
-      justify-content: center;
-      border-top: 1px solid #222;
-    }
-    .tool-btn {
-      background: #272727;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-size: 0.9rem;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; background: #0d0d0d; color: #fff; }
+    header { background: #1b1b1b; padding: 20px; text-align: center; font-size: 2rem; font-weight: bold; }
+    #controls, #advanced { display: flex; gap: 10px; padding: 15px; background: #111; flex-wrap: wrap; }
+    input, select { padding: 10px; border-radius: 8px; border: none; flex: 1; }
+    button { padding: 10px 16px; border-radius: 8px; background: #3b82f6; color: #fff; cursor: pointer; transition: .2s; }
+    button:hover { background: #60a5fa; }
+    #frameContainer { height: calc(100vh - 250px); }
+    iframe { width: 100%; height: 100%; border: none; background: #000; }
+    textarea { width: 100%; height: 200px; background: #111; color: #fff; border-radius: 8px; border: none; padding: 10px; }
   </style>
 </head>
 <body>
-  <header>Proxy Protected Web Browser</header>
+  <header>Kxsis Proxy Browser</header>
 
   <div id="controls">
-    <input id="urlInput" placeholder="Enter a URL..." />
-    <button onclick="loadSite()">Go</button>
-    <button onclick="loadGoogle()">Google</button>
-    <button onclick="toggleDark()">Dark/Light</button>
-    <button onclick="clearFrame()">Clear</button>
+    <input id="urlInput" placeholder="Enter URL..." />
+    <button onclick="go()">Go</button>
+    <button onclick="fetchSource()">Fetch Source</button>
+    <button onclick="useRaw()">Raw Mode</button>
+    <button onclick="addBookmark()">★ Bookmark</button>
+    <button onclick="toggleBookmarks()">📚 Bookmarks</button>
+  </div>
+
+  <div id="advanced">
+    <select id="charset">
+      <option value="">Charset: Default</option>
+      <option value="ISO-8859-1">ISO-8859-1</option>
+      <option value="UTF-8">UTF-8</option>
+    </select>
+    <select id="mode">
+      <option value="raw">Raw (iframe)</option>
+      <option value="get">GET Mode (JSON)</option>
+      <option value="jsonp">JSONP Callback</option>
+    </select>
   </div>
 
   <div id="frameContainer">
     <iframe id="proxyFrame"></iframe>
   </div>
 
-  <div id="toolbar">
-    <button class="tool-btn" onclick="historyBack()">← Back</button>
-    <button class="tool-btn" onclick="historyForward()">Forward →</button>
-    <button class="tool-btn" onclick="refreshFrame()">⟳ Refresh</button>
-  </div>
+  <h3 style="padding-left:15px">Source Output</h3>
+  <textarea id="sourceBox" placeholder="Fetched source will appear here..."></textarea>
+
+  <h3 style="padding-left:15px">Bookmarks</h3>
+  <textarea id="bookmarkBox" placeholder="Bookmarks... (click bookmark button to add)"></textarea>
 
   <script>
-    const proxyBase = "https://api.cors.lol/?url=";
+    const baseRaw = "https://api.allorigins.win/raw?url=";
+    const baseGet = "https://api.allorigins.win/get?url=";
+    const baseJSONP = "https://api.allorigins.win/get?callback=myFunc&url=";
 
-    function formatURL(u) {
-      if (!u.startsWith("http")) return "https://" + u;
-      return u;
+    function formatURL(url) {
+      return url.startsWith("http") ? url : "https://" + url;
     }
 
-    function loadSite() {
+    function buildURL(url) {
+      const charset = document.getElementById("charset").value;
+      const mode = document.getElementById("mode").value;
+
+      let encoded = encodeURIComponent(formatURL(url));
+      let finalURL = "";
+
+      if (mode === "raw") finalURL = baseRaw + encoded;
+      else if (mode === "get") finalURL = baseGet + encoded;
+      else if (mode === "jsonp") finalURL = baseJSONP + encoded;
+
+      if (charset) finalURL += `&charset=${charset}`;
+
+      return finalURL;
+    }
+
+    function go() {
       const url = document.getElementById("urlInput").value;
       if (!url) return;
-      const proxied = proxyBase + encodeURIComponent(formatURL(url));
-      document.getElementById("proxyFrame").src = proxied;
+      document.getElementById("proxyFrame").src = buildURL(url);
     }
 
-    function loadGoogle() {
-      document.getElementById("proxyFrame").src = proxyBase + encodeURIComponent("https://google.com");
+    async function fetchSource() {
+      const url = document.getElementById("urlInput").value;
+      if (!url) return;
+
+      const apiURL = buildURL(url).replace("/raw?", "/get?");
+
+      const res = await fetch(apiURL);
+      const json = await res.json();
+      document.getElementById("sourceBox").value = json.contents;
     }
 
-    function toggleDark() {
-      document.body.classList.toggle("light");
-      if (document.body.classList.contains("light")) {
-        document.body.style.background = "#fafafa";
-        document.body.style.color = "#000";
-      } else {
-        document.body.style.background = "#0f0f0f";
-        document.body.style.color = "#fff";
-      }
+    function useRaw() {
+      document.getElementById("mode").value = "raw";
+      go();
     }
 
-    function clearFrame() {
-      document.getElementById("proxyFrame").src = "about:blank";
+    function addBookmark() {
+      const box = document.getElementById("bookmarkBox");
+      const url = document.getElementById("urlInput").value;
+      if (url) box.value += `\n${url}`;
     }
 
-    function historyBack() {
-      document.getElementById("proxyFrame").contentWindow.history.back();
-    }
-
-    function historyForward() {
-      document.getElementById("proxyFrame").contentWindow.history.forward();
-    }
-
-    function refreshFrame() {
-      const frame = document.getElementById("proxyFrame");
-      frame.src = frame.src;
+    function toggleBookmarks() {
+      const box = document.getElementById("bookmarkBox");
+      box.style.display = box.style.display === "none" ? "block" : "none";
     }
   </script>
 </body>
