@@ -81,9 +81,12 @@
       <option value="UTF-8">UTF-8</option>
     </select>
     <select id="mode">
-      <option value="raw">Raw (iframe)</option>
+      <option value="raw">Raw (AllOrigins)</option>
       <option value="get">GET Mode (JSON)</option>
       <option value="jsonp">JSONP Callback</option>
+      <option value="uv">Ultraviolet Proxy</option>
+      <option value="corrosion">Corrosion Proxy</option>
+      <option value="croxy">CroxyProxy</option>
     </select>
   </div>
 
@@ -113,17 +116,26 @@ function formatURL(url) {
 function buildURL(url) {
   const charset = document.getElementById("charset").value;
   const mode = document.getElementById("mode").value;
-
   url = formatURL(url);
   const encoded = encodeURIComponent(url);
-
   let finalURL = "";
+
   if (mode === "raw") finalURL = baseRaw + encoded;
   if (mode === "get") finalURL = baseGet + encoded;
   if (mode === "jsonp") finalURL = baseJSONP + encoded;
 
-  if (charset) finalURL += `&charset=${charset}`;
+  // NEW: Ultraviolet Proxy
+  if (mode === "uv") finalURL = `https://uv.holyubofficial.net/service/${url}`;
 
+  // NEW: Corrosion Proxy
+  if (mode === "corrosion") finalURL = `https://service.unblockproject.net/service/${url}`;
+
+  // NEW: CroxyProxy
+  if (mode === "croxy") finalURL = `https://www.croxyproxy.com/embed/?url=${encoded}`;
+
+  if (charset && mode !== "uv" && mode !== "corrosion" && mode !== "croxy") {
+    finalURL += `&charset=${charset}`;
+  }
   return finalURL;
 }
 
